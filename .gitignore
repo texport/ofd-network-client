@@ -1,0 +1,47 @@
+.gradle/
+build/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+### Kotlin / JVM ###
+*.class
+*.log
+*.kt.bak
+*.kotlin_metadata
+*.kotlin_module
+*.hprof
+kapt/
+
+### IntelliJ IDEA / Android Studio ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+bin/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Local env ###
+local.properties
