@@ -1,5 +1,6 @@
 plugins {
-    kotlin("jvm") version "2.2.0"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.detekt)
 }
 
 group = "kz.mybrain"
@@ -9,8 +10,14 @@ repositories {
     mavenCentral()
 }
 
+detekt {
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+    buildUponDefaultConfig = true
+    allRules = true
+}
+
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    implementation(libs.kotlinx.coroutines.core)
     testImplementation(kotlin("test"))
 }
 
@@ -20,3 +27,4 @@ tasks.test {
 kotlin {
     jvmToolchain(17)
 }
+

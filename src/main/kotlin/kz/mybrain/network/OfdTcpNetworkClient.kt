@@ -8,6 +8,17 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.SocketTimeoutException
 
+private const val SIZE_OFFSET = 4
+private const val BYTE_MASK = 0xffL
+private const val UINT32_MASK = 0xffffffffL
+private const val SHIFT_8 = 8
+private const val SHIFT_16 = 16
+private const val SHIFT_24 = 24
+private const val OFFSET_1 = 1
+private const val OFFSET_2 = 2
+private const val OFFSET_3 = 3
+
+
 /**
  * TCP-реализация, которая читает один полный ответ и закрывает сокет.
  *
@@ -89,7 +100,7 @@ class OfdTcpNetworkClient(
      */
     private fun readFullMessage(input: InputStream): ByteArray {
         val headerBytes = readExactBytes(input, headerSize, "заголовок", "header")
-        val totalSize = readUInt32Le(headerBytes, 4)
+        val totalSize = readUInt32Le(headerBytes, SIZE_OFFSET)
         if (totalSize < headerSize.toLong()) {
             throw OfdProtocolViolation(
                 bilingualMessage(
@@ -146,10 +157,10 @@ class OfdTcpNetworkClient(
      * Читает little-endian uint32 из [buffer], начиная с [offset].
      */
     private fun readUInt32Le(buffer: ByteArray, offset: Int): Long {
-        val b0 = buffer[offset].toLong() and 0xff
-        val b1 = (buffer[offset + 1].toLong() and 0xff) shl 8
-        val b2 = (buffer[offset + 2].toLong() and 0xff) shl 16
-        val b3 = (buffer[offset + 3].toLong() and 0xff) shl 24
-        return (b0 or b1 or b2 or b3) and 0xffffffffL
+        val b0 = buffer[offset].toLong() and BYTE_MASK
+        val b1 = (buffer[offset + OFFSET_1].toLong() and BYTE_MASK) shl SHIFT_8
+        val b2 = (buffer[offset + OFFSET_2].toLong() and BYTE_MASK) shl SHIFT_16
+        val b3 = (buffer[offset + OFFSET_3].toLong() and BYTE_MASK) shl SHIFT_24
+        return (b0 or b1 or b2 or b3) and UINT32_MASK
     }
 }
