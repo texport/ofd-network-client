@@ -156,6 +156,7 @@ class OfdTcpNetworkClient(
     /**
      * Читает little-endian uint32 из [buffer], начиная с [offset].
      */
+    @Suppress("SameParameterValue")
     private fun readUInt32Le(buffer: ByteArray, offset: Int): Long {
         val b0 = buffer[offset].toLong() and BYTE_MASK
         val b1 = (buffer[offset + OFFSET_1].toLong() and BYTE_MASK) shl SHIFT_8
