@@ -8,7 +8,7 @@ import java.io.IOException
 sealed class OfdNetworkClientException(message: String, cause: Throwable? = null) : IOException(message, cause)
 
 /**
- * Ответ не получен за время таймаута.
+ * Ответ не получен за время тайм-аута.
  */
 class OfdTimeoutNoResponse(message: String, cause: Throwable? = null) :
     OfdNetworkClientException(message, cause)

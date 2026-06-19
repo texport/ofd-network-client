@@ -34,7 +34,7 @@ class OfdTcpNetworkClient(
      * Подключается к endpoint, отправляет [request], читает полный ответ и закрывает сокет.
      *
      * - Сокет всегда закрывается в finally.
-     * - Таймаут применяется к подключению и чтению.
+     * - Тайм-аут применяется к подключению и чтению.
      * - При ошибке возвращается типизированный [OfdNetworkClientException].
      */
     override suspend fun sendAndReceive(endpoint: OfdEndpoint, request: ByteArray): Result<ByteArray> {
@@ -122,8 +122,8 @@ class OfdTcpNetworkClient(
         val payloadBytes = readExactBytes(input, payloadSize, "тело", "payload")
 
         val fullMessage = ByteArray(totalSize.toInt())
-        System.arraycopy(headerBytes, 0, fullMessage, 0, headerBytes.size)
-        System.arraycopy(payloadBytes, 0, fullMessage, headerBytes.size, payloadBytes.size)
+        headerBytes.copyInto(fullMessage)
+        payloadBytes.copyInto(fullMessage, headerBytes.size)
         return fullMessage
     }
 
