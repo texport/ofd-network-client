@@ -57,7 +57,9 @@ For ease of logging and operations in bilingual or multilingual environments, th
 
 ### Installation
 
-#### 1. Via Maven Central (Recommended)
+The library is officially published and hosted on **Maven Central**.
+
+#### Via Maven Central (Recommended)
 Add the dependency to your `build.gradle.kts`:
 
 ```kotlin
@@ -66,18 +68,8 @@ dependencies {
 }
 ```
 
-#### 2. Via Gradle Composite Build (Local Development)
-To include the build directly from source:
-1. Include the build in your main project's `settings.gradle.kts`:
-   ```kotlin
-   includeBuild("../ofd-network-client")
-   ```
-2. Declare the dependency in your main project's `build.gradle.kts`:
-   ```kotlin
-   dependencies {
-       implementation("io.github.texport:ofd-network-client:1.0.0")
-   }
-   ```
+> [!TIP]
+> **Local Development (Optional):** If you are contributing to the library itself and want to test changes locally from source, you can include the local directory as a Composite Build in your consumer's `settings.gradle.kts` via `includeBuild("../ofd-network-client")`.
 
 ---
 
@@ -162,7 +154,11 @@ suspend fun sendFiscalDocument(requestData: ByteArray) {
 
 ### Подключение библиотеки
 
-#### 1. Через Maven Central (Рекомендуемый способ)
+### Подключение библиотеки
+
+Библиотека официально опубликована и доступна в репозитории **Maven Central**.
+
+#### Через Maven Central (Рекомендуемый способ)
 Добавьте зависимость в ваш `build.gradle.kts`:
 
 ```kotlin
@@ -171,17 +167,8 @@ dependencies {
 }
 ```
 
-#### 2. Через Gradle Composite Build (Локальная разработка)
-1. Подключите сборку в `settings.gradle.kts` основного проекта:
-   ```kotlin
-   includeBuild("../ofd-network-client")
-   ```
-2. Укажите зависимость в `build.gradle.kts`:
-   ```kotlin
-   dependencies {
-       implementation("io.github.texport:ofd-network-client:1.0.0")
-   }
-   ```
+> [!TIP]
+> **Локальная разработка (Опционально):** Если вы дорабатываете саму библиотеку и хотите тестировать изменения локально из исходников, вы можете временно подключить её как Composite Build в `settings.gradle.kts` вашего основного проекта с помощью `includeBuild("../ofd-network-client")`.
 
 ---
 
