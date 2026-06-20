@@ -2,6 +2,7 @@
 kotlin = "2.4.0"
 detekt = "1.23.8"
 coroutines = "1.11.0"
+nmcp = "1.5.0"
 
 [libraries]
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -9,4 +10,5 @@ kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+nmcp = { id = "com.gradleup.nmcp", version.ref = "nmcp" }
 

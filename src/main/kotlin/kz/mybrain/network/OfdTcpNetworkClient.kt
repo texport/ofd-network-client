@@ -43,8 +43,9 @@ class OfdTcpNetworkClient(
                 if (request.size < headerSize) {
                     return@withContext Result.failure(
                         OfdProtocolViolation(
-                            bilingualMessage(
+                            trilingualMessage(
                                 "Размер запроса ${request.size} меньше размера заголовка $headerSize",
+                                "Сұраныс өлшемі ${request.size} тақырып өлшемінен $headerSize кіші",
                                 "Request size ${request.size} is smaller than header size $headerSize"
                             )
                         )
@@ -72,8 +73,9 @@ class OfdTcpNetworkClient(
             } catch (e: SocketTimeoutException) {
                 Result.failure(
                     OfdTimeoutNoResponse(
-                        bilingualMessage(
+                        trilingualMessage(
                             "Нет ответа от сервера за ${timeoutMillis}мс",
+                            "Серверден ${timeoutMillis}мс ішінде жауап болмады",
                             "No response from server in ${timeoutMillis}ms"
                         ),
                         e
@@ -84,8 +86,9 @@ class OfdTcpNetworkClient(
             } catch (e: IOException) {
                 Result.failure(
                     OfdTransportFailure(
-                        bilingualMessage(
+                        trilingualMessage(
                             "Транспортная ошибка: ${e::class.simpleName}: ${e.message ?: "нет подробностей"}",
+                            "Көліктік қате: ${e::class.simpleName}: ${e.message ?: "мәліметтер жоқ"}",
                             "Transport failure: ${e::class.simpleName}: ${e.message ?: "no details"}"
                         ),
                         e
@@ -99,27 +102,29 @@ class OfdTcpNetworkClient(
      * Читает полный ответ по размеру, указанному в заголовке.
      */
     private fun readFullMessage(input: InputStream): ByteArray {
-        val headerBytes = readExactBytes(input, headerSize, "заголовок", "header")
+        val headerBytes = readExactBytes(input, headerSize, "заголовок", "тақырып", "header")
         val totalSize = readUInt32Le(headerBytes, SIZE_OFFSET)
         if (totalSize < headerSize.toLong()) {
             throw OfdProtocolViolation(
-                bilingualMessage(
+                trilingualMessage(
                     "Размер сообщения $totalSize меньше размера заголовка $headerSize",
+                    "Хабарлама өлшемі $totalSize тақырып өлшемінен $headerSize кіші",
                     "Message size $totalSize is smaller than header size $headerSize"
                 )
             )
         }
         if (totalSize > Int.MAX_VALUE) {
             throw OfdProtocolViolation(
-                bilingualMessage(
+                trilingualMessage(
                     "Размер сообщения $totalSize превышает Int.MAX_VALUE",
+                    "Хабарлама өлшемі $totalSize Int.MAX_VALUE мәнінен асады",
                     "Message size $totalSize exceeds Int.MAX_VALUE"
                 )
             )
         }
 
         val payloadSize = totalSize.toInt() - headerSize
-        val payloadBytes = readExactBytes(input, payloadSize, "тело", "payload")
+        val payloadBytes = readExactBytes(input, payloadSize, "тело", "деректер", "payload")
 
         val fullMessage = ByteArray(totalSize.toInt())
         headerBytes.copyInto(fullMessage)
@@ -134,6 +139,7 @@ class OfdTcpNetworkClient(
         input: InputStream,
         count: Int,
         partNameRu: String,
+        partNameKk: String,
         partNameEn: String
     ): ByteArray {
         val buffer = ByteArray(count)
@@ -142,8 +148,9 @@ class OfdTcpNetworkClient(
             val read = input.read(buffer, readTotal, count - readTotal)
             if (read == -1) {
                 throw OfdProtocolViolation(
-                    bilingualMessage(
+                    trilingualMessage(
                         "Сервер закрыл соединение до полного чтения: $partNameRu",
+                        "Сервер толық оқылғанға дейін қосылымды жауып тастады: $partNameKk",
                         "Server closed connection before full $partNameEn was received"
                     )
                 )

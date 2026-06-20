@@ -25,6 +25,7 @@ class OfdTransportFailure(message: String, cause: Throwable? = null) :
     OfdNetworkClientException(message, cause)
 
 /**
- * Формирует сообщение об ошибке на русском и английском.
+ * Формирует сообщение об ошибке на русском, казахском и английском.
  */
-fun bilingualMessage(ru: String, en: String): String = "RU: $ru | EN: $en"
+fun trilingualMessage(ru: String, kk: String, en: String): String = "RU: $ru | KK: $kk | EN: $en"
+
