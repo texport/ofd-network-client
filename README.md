@@ -3,7 +3,7 @@
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.texport/ofd-network-client.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/io.github.texport/ofd-network-client)
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/texport/ofd-network-client/releases)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![CI Build](https://github.com/texport/ofd-network-client/actions/workflows/ci.yml/badge.svg)](https://github.com/texport/ofd-network-client/actions)
+[![CI Build](https://img.shields.io/github/actions/workflow/status/texport/ofd-network-client/ci.yml?branch=main&label=CI%20Build)](https://github.com/texport/ofd-network-client/actions)
 
 ---
 
@@ -28,7 +28,7 @@ It implements a stateless, short-lived socket connection pattern ("one connectio
 - **Stateless TCP Socket Handling**: Connects, sends the payload, reads the full response, and immediately closes the socket to prevent idle connection drops.
 - **Coroutines Native**: Fully asynchronous and non-blocking, designed with `Dispatchers.IO` for seamless JVM and Android integration.
 - **Header-Prefixed Length Resolution**: Automatically parses the total message size from the 18-byte CPCR header (reads a 4-byte little-endian `uint32` at offset 4) to ensure complete payload loading without partial reads.
-- **Typed Error Handling**: Wraps socket errors, timeouts, and protocol violations into clean, trilingual (RU/KK/EN) Kotlin `Result` exceptions.
+- **Typed Error Handling**: Wraps socket errors, timeouts, and protocol violations into clean, multi-language Kotlin `Result` exceptions.
 
 ---
 
@@ -44,10 +44,10 @@ The library is built strictly following modern software design principles:
 
 ---
 
-### Exception & Trilingual Error Model
+### Exception & Error Message Model
 
-For ease of logging and operations in Kazakhstan, the library throws trilingual exceptions that help developers, support engineers, and local users/cashiers diagnose connectivity issues instantly:
-- **Trilingual Messages**: Exceptions contain error messages in the format `RU: [Сообщение] | KK: [Хабарлама] | EN: [Message]`. This allows directly rendering errors to cashiers/support in Russian and Kazakh, and developers in English without extra client-side translation layers.
+For ease of logging and operations in bilingual or multilingual environments, the library throws detailed exceptions that help developers and support engineers diagnose connectivity issues instantly:
+- **Multi-language Messages**: Exceptions contain error messages in the format `RU: [Сообщение] | KK: [Хабарлама] | EN: [Message]`. This allows directly rendering errors to cashiers/support in Russian and Kazakh, and developers in English without extra client-side translation layers.
 - **Typed Exceptions**:
   - `OfdTimeoutNoResponse`: Thrown when a socket connect or read times out (e.g., when the OFD server is down, or there is no mobile connection).
   - `OfdProtocolViolation`: Thrown when the protocol is violated (e.g., when the server closes the stream prematurely, or the parsed header size is smaller than the header itself).
@@ -133,7 +133,7 @@ suspend fun sendFiscalDocument(requestData: ByteArray) {
 - **Короткоживущие сокеты**: Клиент устанавливает соединение, отправляет пакет, считывает полный ответ и сразу же закрывает сокет, предотвращая утечку ресурсов и удержание «битых» портов.
 - **Поддержка Корутин**: Полностью асинхронный неблокирующий API, выполняющий I/O-операции в контексте `Dispatchers.IO`.
 - **Чтение по размеру из заголовка**: Автоматически считывает размер сообщения (4 байта little-endian `uint32` по смещению 4 в 18-байтовом заголовке протокола CPCR), дочитывая пакет до конца и исключая неполный прием данных.
-- **Типизированная обработка ошибок**: Локализует сетевые ошибки, таймауты и нарушения протокола ОФД в виде трехъязычных (RU/KK/EN) исключений внутри Kotlin-контейнера `Result`.
+- **Типизированная обработка ошибок**: Локализует сетевые ошибки, таймауты и нарушения протокола ОФД в виде многоязычных (RU/KK/EN) исключений внутри Kotlin-контейнера `Result`.
 
 ---
 
@@ -149,10 +149,10 @@ suspend fun sendFiscalDocument(requestData: ByteArray) {
 
 ---
 
-### Трехъязычная модель ошибок и исключений
+### Модель ошибок и исключений
 
-Для удобства логирования и локализации на территории Республики Казахстан, библиотека поддерживает генерацию сообщений об ошибках сразу на трех языках:
-- **Трехъязычные сообщения**: Сообщение исключения имеет вид `RU: [Текст ошибки] | KK: [Қате мәтіні] | EN: [Error message]`. Это позволяет выводить текст ошибки кассиру (на казахском или русском) или в интерфейс техподдержки без ручного маппинга и написания словарей перевода на стороне клиента.
+Для удобства логирования и эксплуатации в многоязычной среде (например, на территории Республики Казахстан), библиотека поддерживает генерацию сообщений об ошибках сразу на нескольких языках:
+- **Многоязычные сообщения**: Сообщение исключения имеет вид `RU: [Текст ошибки] | KK: [Қате мәтіні] | EN: [Error message]`. Это позволяет выводить текст ошибки кассиру (на казахском или русском) или в интерфейс техподдержки без ручного маппинга и написания словарей перевода на стороне клиента.
 - **Типизированные исключения**:
   - `OfdTimeoutNoResponse`: Вызывается при превышении таймаута подключения или чтения (сервер ОФД недоступен или отсутствует сотовая связь).
   - `OfdProtocolViolation`: Вызывается при нарушении структуры протокола (размер сообщения в заголовке некорректен, сокет закрыт сервером раньше времени).
