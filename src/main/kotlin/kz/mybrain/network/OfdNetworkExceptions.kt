@@ -27,5 +27,5 @@ class OfdTransportFailure(message: String, cause: Throwable? = null) :
 /**
  * Формирует сообщение об ошибке на русском, казахском и английском.
  */
-fun trilingualMessage(ru: String, kk: String, en: String): String = "RU: $ru | KK: $kk | EN: $en"
+internal fun trilingualMessage(ru: String, kk: String, en: String): String = "RU: $ru | KK: $kk | EN: $en"
 
