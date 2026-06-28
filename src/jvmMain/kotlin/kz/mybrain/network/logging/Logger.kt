@@ -1,7 +1,7 @@
 package kz.mybrain.network.logging
 
-import kotlin.reflect.KClass
 import org.slf4j.LoggerFactory
+import kotlin.reflect.KClass
 
 /**
  * Реализация логера на JVM платформе на базе библиотеки SLF4J.

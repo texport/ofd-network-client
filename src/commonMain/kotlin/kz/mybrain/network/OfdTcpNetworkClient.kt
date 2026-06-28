@@ -6,9 +6,9 @@ import io.ktor.network.sockets.openReadChannel
 import io.ktor.network.sockets.openWriteChannel
 import io.ktor.utils.io.readFully
 import io.ktor.utils.io.writeFully
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import kotlinx.io.IOException
 import kz.mybrain.network.logging.getLogger
 import kotlin.time.Duration.Companion.milliseconds
@@ -50,8 +50,13 @@ class OfdTcpNetworkClient(
      * @return [Result] с байтовым массивом полного сообщения (заголовок + тело) или сетевой ошибкой.
      */
     override suspend fun sendAndReceive(endpoint: OfdEndpoint, request: ByteArray): Result<ByteArray> {
-        logger.info("Отправка запроса к ОФД ({}:{}). Размер буфера: {} байт", endpoint.host, endpoint.port, request.size)
-        
+        logger.info(
+            "Отправка запроса к ОФД ({}:{}). Размер буфера: {} байт",
+            endpoint.host,
+            endpoint.port,
+            request.size
+        )
+
         return try {
             if (request.size < headerSize) {
                 logger.warn("Размер запроса {} байт меньше минимального размера заголовка {}", request.size, headerSize)
@@ -77,7 +82,7 @@ class OfdTcpNetworkClient(
                         writeChannel.writeFully(request)
 
                         val readChannel = socket.openReadChannel()
-                        
+
                         val headerBytes = ByteArray(headerSize)
                         try {
                             logger.info("Чтение заголовка размером {} байт из сокета...", headerSize)
@@ -98,7 +103,11 @@ class OfdTcpNetworkClient(
                         logger.info("Прочитан заголовок. Заявленный размер всего сообщения от ОФД: {} байт", totalSize)
 
                         if (totalSize < headerSize.toLong()) {
-                            logger.warn("Указанный в заголовке размер {} меньше размера самого заголовка {}", totalSize, headerSize)
+                            logger.warn(
+                                "Указанный в заголовке размер {} меньше размера самого заголовка {}",
+                                totalSize,
+                                headerSize
+                            )
                             throw OfdProtocolViolation(
                                 trilingualMessage(
                                     "Размер сообщения $totalSize меньше размера заголовка $headerSize",
@@ -139,7 +148,10 @@ class OfdTcpNetworkClient(
                         headerBytes.copyInto(fullMessage)
                         payloadBytes.copyInto(fullMessage, headerBytes.size)
 
-                        logger.info("Успешно получено и собрано полное сообщение от ОФД размером {} байт", fullMessage.size)
+                        logger.info(
+                            "Успешно получено и собрано полное сообщение от ОФД размером {} байт",
+                            fullMessage.size
+                        )
                         Result.success(fullMessage)
                     } finally {
                         socket.close()
