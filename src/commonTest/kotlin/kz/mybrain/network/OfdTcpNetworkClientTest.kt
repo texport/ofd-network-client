@@ -7,6 +7,7 @@ import io.ktor.network.sockets.openReadChannel
 import io.ktor.network.sockets.openWriteChannel
 import io.ktor.utils.io.readFully
 import io.ktor.utils.io.writeFully
+import io.ktor.utils.io.close
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -140,6 +141,8 @@ class OfdTcpNetworkClientTest {
             val response = ByteArray(18)
             response[4] = 30
             writeChannel.writeFully(response)
+            @Suppress("DEPRECATION")
+            writeChannel.close()
             clientSocket.close()
         }
 
