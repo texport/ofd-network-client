@@ -74,6 +74,11 @@ tasks.withType<Javadoc>().configureEach {
 
 publishing {
     publications.withType<MavenPublication>().configureEach {
+        val javadocJarTask = tasks.register<org.gradle.api.tasks.bundling.Jar>("${name}JavadocJar") {
+            archiveClassifier.set("javadoc")
+            archiveAppendix.set(this@configureEach.name)
+        }
+        artifact(javadocJarTask)
         pom {
             name.set("ofd-network-client")
             description.set("Lightweight Kotlin TCP network client for OFD KazakhTelecom communication")
