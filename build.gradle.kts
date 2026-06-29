@@ -74,7 +74,8 @@ tasks.withType<Javadoc>().configureEach {
 
 publishing {
     publications.withType<MavenPublication>().configureEach {
-        val javadocJarTask = tasks.register<org.gradle.api.tasks.bundling.Jar>("${name}JavadocJar") {
+        val javadocJarTask = tasks.register<Jar>("${name}JavadocJar") {
+            description = "Generates Javadoc jar for publication ${this@configureEach.name}"
             archiveClassifier.set("javadoc")
             archiveAppendix.set(this@configureEach.name)
         }
