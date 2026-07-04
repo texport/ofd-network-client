@@ -17,7 +17,7 @@ let package = Package(
         .binaryTarget(
             name: "OfdNetworkClient",
             url: "https://github.com/texport/ofd-network-client/releases/download/v1.2.0/OfdNetworkClient.xcframework.zip",
-            checksum: "8d2e471e3e99f1f572328729a9f574bf62a649b0953f186611f6f788d8171596"
+            checksum: "b0aae2bd47ede806d3bc3f6d15130a65fee01d151e2886e5d1548edc635bdeaa"
         )
     ]
 )
