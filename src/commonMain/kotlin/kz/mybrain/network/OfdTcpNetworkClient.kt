@@ -4,6 +4,7 @@ import io.ktor.network.selector.SelectorManager
 import io.ktor.network.sockets.aSocket
 import io.ktor.network.sockets.openReadChannel
 import io.ktor.network.sockets.openWriteChannel
+import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readFully
 import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.CancellationException
@@ -22,9 +23,14 @@ private const val SHIFT_24 = 24
 private const val OFFSET_1 = 1
 private const val OFFSET_2 = 2
 private const val OFFSET_3 = 3
+private const val UINT32_BYTE_COUNT = 4
+private const val DEFAULT_HEADER_SIZE = 18
+private const val DEFAULT_TIMEOUT_MILLIS = 7_000
+private const val BYTES_IN_MEBIBYTE = 1024 * 1024
+private const val DEFAULT_MAX_RESPONSE_BYTES = 5 * BYTES_IN_MEBIBYTE
 
 /**
- * TCP-клиент сетевого уровня для взаимодействия с ОФД (Казахтелеком).
+ * TCP-клиент сетевого уровня для взаимодействия с ОФД, поддерживающим протокол CPCR.
  *
  * Реализует отправку запроса и чтение одного полного ответа по протоколу CPCR.
  *
@@ -33,11 +39,27 @@ private const val OFFSET_3 = 3
  * 2. Общий размер сообщения записан в заголовке по смещению [SIZE_OFFSET] (4-й байт)
  *    в формате little-endian uint32.
  * 3. Размер заголовка по умолчанию равен 18 байтам.
+ * 4. Внешняя отмена coroutine пробрасывается вызывающему коду и не преобразуется в [Result.failure].
+ * 5. Ответы больше [maxResponseBytes] отклоняются до выделения буфера под тело сообщения.
  */
 class OfdTcpNetworkClient(
-    private val headerSize: Int = 18,
-    private val timeoutMillis: Int = 7_000,
+    private val headerSize: Int = DEFAULT_HEADER_SIZE,
+    private val timeoutMillis: Int = DEFAULT_TIMEOUT_MILLIS,
+    private val maxResponseBytes: Int = DEFAULT_MAX_RESPONSE_BYTES,
 ) : OfdNetworkClient {
+
+    init {
+        require(headerSize >= SIZE_OFFSET + UINT32_BYTE_COUNT) {
+            "headerSize must be at least ${SIZE_OFFSET + UINT32_BYTE_COUNT} bytes " +
+                "to contain uint32 size at offset $SIZE_OFFSET"
+        }
+        require(timeoutMillis > 0) {
+            "timeoutMillis must be positive"
+        }
+        require(maxResponseBytes >= headerSize) {
+            "maxResponseBytes must be greater than or equal to headerSize"
+        }
+    }
 
     private val logger = getLogger(OfdTcpNetworkClient::class)
 
@@ -58,18 +80,7 @@ class OfdTcpNetworkClient(
         )
 
         return try {
-            if (request.size < headerSize) {
-                logger.warn("Размер запроса {} байт меньше минимального размера заголовка {}", request.size, headerSize)
-                return Result.failure(
-                    OfdProtocolViolation(
-                        trilingualMessage(
-                            "Размер запроса ${request.size} меньше размера заголовка $headerSize",
-                            "Сұраныс өлшемі ${request.size} тақырып өлшемінен $headerSize кіші",
-                            "Request size ${request.size} is smaller than header size $headerSize"
-                        )
-                    )
-                )
-            }
+            validateRequest(request)?.let { return Result.failure(it) }
 
             withTimeout(timeoutMillis.milliseconds) {
                 val selectorManager = SelectorManager(ioDispatcher)
@@ -82,71 +93,15 @@ class OfdTcpNetworkClient(
                         writeChannel.writeFully(request)
 
                         val readChannel = socket.openReadChannel()
-
-                        val headerBytes = ByteArray(headerSize)
-                        try {
-                            logger.info("Чтение заголовка размером {} байт из сокета...", headerSize)
-                            readChannel.readFully(headerBytes, 0, headerSize)
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            logger.warn("Соединение закрыто ОФД до завершения чтения заголовка")
-                            throw OfdProtocolViolation(
-                                trilingualMessage(
-                                    "Сервер закрыл соединение до полного чтения: заголовок",
-                                    "Сервер толық оқылғанға дейін қосылымды жауып тастады: тақырып",
-                                    "Server closed connection before full header was received"
-                                )
-                            )
-                        }
-
+                        val headerBytes = readHeader(readChannel)
                         val totalSize = readUInt32Le(headerBytes)
-                        logger.info("Прочитан заголовок. Заявленный размер всего сообщения от ОФД: {} байт", totalSize)
 
-                        if (totalSize < headerSize.toLong()) {
-                            logger.warn(
-                                "Указанный в заголовке размер {} меньше размера самого заголовка {}",
-                                totalSize,
-                                headerSize
-                            )
-                            throw OfdProtocolViolation(
-                                trilingualMessage(
-                                    "Размер сообщения $totalSize меньше размера заголовка $headerSize",
-                                    "Хабарлама өлшемі $totalSize тақырып өлшемінен $headerSize кіші",
-                                    "Message size $totalSize is smaller than header size $headerSize"
-                                )
-                            )
-                        }
-                        if (totalSize > Int.MAX_VALUE) {
-                            logger.warn("Превышен лимит размера сообщения: {} байт", totalSize)
-                            throw OfdProtocolViolation(
-                                trilingualMessage(
-                                    "Размер сообщения $totalSize превышает Int.MAX_VALUE",
-                                    "Хабарлама өлшемі $totalSize Int.MAX_VALUE мәнінен асады",
-                                    "Message size $totalSize exceeds Int.MAX_VALUE"
-                                )
-                            )
-                        }
+                        logger.info("Прочитан заголовок. Заявленный размер всего сообщения от ОФД: {} байт", totalSize)
+                        validateTotalSize(totalSize)
 
                         val payloadSize = totalSize.toInt() - headerSize
-                        val payloadBytes = ByteArray(payloadSize)
-                        try {
-                            logger.info("Чтение полезной нагрузки размером {} байт из сокета...", payloadSize)
-                            readChannel.readFully(payloadBytes, 0, payloadSize)
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            logger.warn("Соединение разорвано ОФД в процессе чтения полезной нагрузки")
-                            throw OfdProtocolViolation(
-                                trilingualMessage(
-                                    "Сервер закрыл соединение до полного чтения: тело",
-                                    "Сервер толық оқылғанға дейін қосылымды жауып тастады: деректер",
-                                    "Server closed connection before full payload was received"
-                                )
-                            )
-                        }
-
-                        val fullMessage = ByteArray(totalSize.toInt())
-                        headerBytes.copyInto(fullMessage)
-                        payloadBytes.copyInto(fullMessage, headerBytes.size)
+                        val payloadBytes = readPayload(readChannel, payloadSize)
+                        val fullMessage = assembleMessage(headerBytes, payloadBytes, totalSize.toInt())
 
                         logger.info(
                             "Успешно получено и собрано полное сообщение от ОФД размером {} байт",
@@ -172,33 +127,109 @@ class OfdTcpNetworkClient(
                     e
                 )
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: OfdProtocolViolation) {
             Result.failure(e)
         } catch (e: IOException) {
             logger.error("Транспортное исключение при работе с сокетом ОФД", e)
-            Result.failure(
-                OfdTransportFailure(
-                    trilingualMessage(
-                        "Транспортная ошибка: ${e::class.simpleName}: ${e.message ?: "нет подробностей"}",
-                        "Көліктік қате: ${e::class.simpleName}: ${e.message ?: "мәліметтер жоқ"}",
-                        "Transport failure: ${e::class.simpleName}: ${e.message ?: "no details"}"
-                    ),
-                    e
-                )
-            )
+            Result.failure(e.toOfdTransportFailure())
         } catch (e: Throwable) {
             logger.error("Непредвиденная ошибка в сетевом клиенте ОФД", e)
-            Result.failure(
-                OfdTransportFailure(
-                    trilingualMessage(
-                        "Неизвестная ошибка: ${e::class.simpleName}: ${e.message ?: "нет подробностей"}",
-                        "Белгісіз қате: ${e::class.simpleName}: ${e.message ?: "мәліметтер жоқ"}",
-                        "Unknown failure: ${e::class.simpleName}: ${e.message ?: "no details"}"
-                    ),
-                    e
+            Result.failure(e.toUnexpectedOfdTransportFailure())
+        }
+    }
+
+    private fun validateRequest(request: ByteArray): OfdProtocolViolation? {
+        if (request.size >= headerSize) {
+            return null
+        }
+
+        logger.warn("Размер запроса {} байт меньше минимального размера заголовка {}", request.size, headerSize)
+        return OfdRequestTooShort(
+            trilingualMessage(
+                "Размер запроса ${request.size} меньше размера заголовка $headerSize",
+                "Сұраныс өлшемі ${request.size} тақырып өлшемінен $headerSize кіші",
+                "Request size ${request.size} is smaller than header size $headerSize"
+            )
+        )
+    }
+
+    private suspend fun readHeader(readChannel: ByteReadChannel): ByteArray {
+        val headerBytes = ByteArray(headerSize)
+        try {
+            logger.info("Чтение заголовка размером {} байт из сокета...", headerSize)
+            readChannel.readFully(headerBytes, 0, headerSize)
+        } catch (e: Throwable) {
+            if (e is CancellationException) throw e
+            logger.warn("Соединение закрыто ОФД до завершения чтения заголовка")
+            throw OfdResponseHeaderIncomplete(
+                trilingualMessage(
+                    "Сервер закрыл соединение до полного чтения: заголовок",
+                    "Сервер толық оқылғанға дейін қосылымды жауып тастады: тақырып",
+                    "Server closed connection before full header was received"
                 )
             )
         }
+        return headerBytes
+    }
+
+    private fun validateTotalSize(totalSize: Long) {
+        if (totalSize < headerSize.toLong()) {
+            logger.warn(
+                "Указанный в заголовке размер {} меньше размера самого заголовка {}",
+                totalSize,
+                headerSize
+            )
+            throw OfdResponseSizeTooSmall(
+                trilingualMessage(
+                    "Размер сообщения $totalSize меньше размера заголовка $headerSize",
+                    "Хабарлама өлшемі $totalSize тақырып өлшемінен $headerSize кіші",
+                    "Message size $totalSize is smaller than header size $headerSize"
+                )
+            )
+        }
+
+        if (totalSize > maxResponseBytes.toLong()) {
+            logger.warn("Превышен лимит размера сообщения: {} байт", totalSize)
+            throw OfdResponseSizeTooLarge(
+                trilingualMessage(
+                    "Размер сообщения $totalSize превышает лимит $maxResponseBytes",
+                    "Хабарлама өлшемі $totalSize $maxResponseBytes шегінен асады",
+                    "Message size $totalSize exceeds limit $maxResponseBytes"
+                )
+            )
+        }
+    }
+
+    private suspend fun readPayload(readChannel: ByteReadChannel, payloadSize: Int): ByteArray {
+        val payloadBytes = ByteArray(payloadSize)
+        if (payloadSize == 0) {
+            return payloadBytes
+        }
+
+        try {
+            logger.info("Чтение полезной нагрузки размером {} байт из сокета...", payloadSize)
+            readChannel.readFully(payloadBytes, 0, payloadSize)
+        } catch (e: Throwable) {
+            if (e is CancellationException) throw e
+            logger.warn("Соединение разорвано ОФД в процессе чтения полезной нагрузки")
+            throw OfdResponsePayloadIncomplete(
+                trilingualMessage(
+                    "Сервер закрыл соединение до полного чтения: тело",
+                    "Сервер толық оқылғанға дейін қосылымды жауып тастады: деректер",
+                    "Server closed connection before full payload was received"
+                )
+            )
+        }
+        return payloadBytes
+    }
+
+    private fun assembleMessage(headerBytes: ByteArray, payloadBytes: ByteArray, totalSize: Int): ByteArray {
+        val fullMessage = ByteArray(totalSize)
+        headerBytes.copyInto(fullMessage)
+        payloadBytes.copyInto(fullMessage, headerBytes.size)
+        return fullMessage
     }
 
     /**
@@ -211,4 +242,28 @@ class OfdTcpNetworkClient(
         val b3 = (buffer[SIZE_OFFSET + OFFSET_3].toLong() and BYTE_MASK) shl SHIFT_24
         return (b0 or b1 or b2 or b3) and UINT32_MASK
     }
+}
+
+internal fun IOException.toOfdTransportFailure(): OfdTransportFailure {
+    return OfdTransportFailure(
+        trilingualMessage(
+            "Транспортная ошибка: ${this::class.simpleName}: ${message ?: "нет подробностей"}",
+            "Көліктік қате: ${this::class.simpleName}: ${message ?: "мәліметтер жоқ"}",
+            "Transport failure: ${this::class.simpleName}: ${message ?: "no details"}"
+        ),
+        this
+    )
+}
+
+internal fun Throwable.toUnexpectedOfdTransportFailure(): OfdTransportFailure {
+    return OfdTransportFailure(
+        trilingualMessage(
+            "Неизвестная ошибка: ${this::class.simpleName}: ${message ?: "нет подробностей"}",
+            "Белгісіз қате: ${this::class.simpleName}: ${message ?: "мәліметтер жоқ"}",
+            "Unknown failure: ${this::class.simpleName}: ${message ?: "no details"}"
+        ),
+        this,
+        OfdTransportFailureReason.UNEXPECTED_FAILURE,
+        OfdFailureSide.UNKNOWN
+    )
 }

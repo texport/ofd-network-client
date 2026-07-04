@@ -6,22 +6,26 @@ import java.util.zip.ZipEntry
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.kover)
     alias(libs.plugins.nmcp)
+    alias(libs.plugins.nmcp.aggregation)
     `maven-publish`
     signing
 }
 
 group = "io.github.texport"
-version = "1.1.0"
+version = "1.2.0"
 
 repositories {
-    mavenLocal()
+    google()
     mavenCentral()
 }
 
 dependencies {
     detektPlugins(libs.detekt.formatting)
+    add("nmcpAggregation", dependencies.project(mapOf("path" to ":")))
 }
 
 detekt {
@@ -29,11 +33,36 @@ detekt {
     buildUponDefaultConfig = true
     allRules = true
     autoCorrect = true
-    source.setFrom(files("src/commonMain/kotlin", "src/jvmMain/kotlin", "src/iosMain/kotlin"))
+    source.setFrom(files("src/commonMain/kotlin", "src/jvmMain/kotlin", "src/androidMain/kotlin", "src/iosMain/kotlin"))
+}
+
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "kz.mybrain.network.logging.*"
+                )
+            }
+        }
+
+        verify {
+            rule {
+                minBound(100)
+            }
+        }
+    }
 }
 
 kotlin {
     jvm()
+    android {
+        namespace = "kz.mybrain.network"
+        compileSdk = libs.versions.androidCompileSdk.get().toInt()
+        minSdk = libs.versions.androidMinSdk.get().toInt()
+
+        withHostTest {}
+    }
     
     val xcf = XCFramework("OfdNetworkClient")
     listOf(iosArm64(), iosX64(), iosSimulatorArm64()).forEach { target ->
@@ -82,7 +111,7 @@ publishing {
         artifact(javadocJarTask)
         pom {
             name.set("ofd-network-client")
-            description.set("Lightweight Kotlin TCP network client for OFD KazakhTelecom communication")
+            description.set("Lightweight Kotlin TCP network client for OFD CPCR communication")
             url.set("https://github.com/texport/ofd-network-client")
             
             licenses {
@@ -114,8 +143,8 @@ signing {
     sign(publishing.publications)
 }
 
-nmcp {
-    publishAllPublicationsToCentralPortal {
+nmcpAggregation {
+    centralPortal {
         username.set(project.findProperty("ossrhUsername")?.toString() ?: System.getenv("OSSRH_USERNAME"))
         password.set(project.findProperty("ossrhPassword")?.toString() ?: System.getenv("OSSRH_PASSWORD"))
         publishingType.set("USER_MANAGED")
@@ -126,6 +155,10 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().con
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
+}
+
+tasks.named("check") {
+    dependsOn("koverVerify")
 }
 
 tasks.register("generateSpmManifest") {
@@ -209,4 +242,3 @@ tasks.register("generateSpmManifest") {
         println("SPM manifest generation complete for version $versionStr!")
     }
 }
-

@@ -2,10 +2,14 @@
 kotlin = "2.4.0"
 detekt = "1.23.8"
 coroutines = "1.11.0"
-nmcp = "1.5.0"
-ktor = "3.0.3"
+nmcp = "1.6.1"
+kover = "0.9.8"
+ktor = "3.5.1"
 slf4j = "2.0.18"
 javaTargetCore = "17"
+androidGradlePlugin = "9.2.1"
+androidCompileSdk = "37"
+androidMinSdk = "23"
 
 [libraries]
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -15,5 +19,8 @@ detekt-formatting = { group = "io.gitlab.arturbosch.detekt", name = "detekt-form
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "androidGradlePlugin" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 nmcp = { id = "com.gradleup.nmcp", version.ref = "nmcp" }
+nmcp-aggregation = { id = "com.gradleup.nmcp.aggregation", version.ref = "nmcp" }
