@@ -182,16 +182,20 @@ tasks.register("generateSpmManifest") {
         println("Zipping XCFramework to ${zipFile.absolutePath}...")
         zipFile.delete()
         ZipOutputStream(zipFile.outputStream().buffered()).use { zos ->
-            xcframeworkDir.walkTopDown().forEach { file ->
-                if (file.isFile) {
-                    val relativePath = file.relativeTo(xcframeworkDir.parentFile).path
-                    zos.putNextEntry(ZipEntry(relativePath))
+            xcframeworkDir.walkTopDown()
+                .filter { it.isFile }
+                .sortedBy { it.relativeTo(xcframeworkDir.parentFile).invariantSeparatorsPath }
+                .forEach { file ->
+                    val relativePath = file.relativeTo(xcframeworkDir.parentFile).invariantSeparatorsPath
+                    val entry = ZipEntry(relativePath).apply {
+                        time = 0L
+                    }
+                    zos.putNextEntry(entry)
                     file.inputStream().buffered().use { input ->
                         input.copyTo(zos)
                     }
                     zos.closeEntry()
                 }
-            }
         }
 
         // 2. Compute SHA-256
