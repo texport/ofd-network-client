@@ -72,9 +72,9 @@ All library failures inherit from `OfdNetworkClientException`.
 
 `OfdProtocolViolation`, `OfdTimeoutNoResponse`, and `OfdTransportFailure` also expose machine-readable `reason` and `side` properties.
 
----
+### Getting Started / Integration
 
-### Installation
+#### Kotlin Multiplatform & Android
 
 Add the dependency to your shared `commonMain` source set inside `build.gradle.kts`:
 
@@ -89,6 +89,30 @@ kotlin {
     }
 }
 ```
+
+#### Apple Swift Package Manager (SPM)
+
+You can integrate this library directly into your iOS project using Xcode's Swift Package Manager:
+1. In Xcode, select **File ➔ Add Package Dependencies...**
+2. Enter the repository URL: `https://github.com/texport/ofd-network-client.git`
+3. Set the version rules to **Up to Next Major** starting with `1.2.0`.
+
+---
+
+### Architecture Boundary & Limits
+
+The `ofd-network-client` operates as a low-level network transport library and enforces a clear boundary between pure connection/protocol logic and application-level responsibilities:
+
+- **Inside the Library (Responsibilities):**
+  - TCP connection lifecycle management (connect/disconnect).
+  - Short-lived TCP sockets (single transaction request-response loop).
+  - CPCR packet header parsing (extracting message length at byte offset `4`).
+  - Validation of message bounds (`maxResponseBytes`, `headerSize`) to prevent Out Of Memory (OOM) failures before allocating response buffers.
+  - Multiplatform expect/actual definitions for I/O dispatching and SLF4J/native logging.
+- **Outside the Library (Delegated to Consumers):**
+  - Persistent command buffer/database storage (no offline queue database is bundled).
+  - Thread synchronization, locking, lease structures, and scheduling across multiple client nodes.
+  - Retry policies, exponential backoffs, and sync coordination logic (delegated to libraries like `superkassa-offline-queue`).
 
 ---
 
@@ -145,9 +169,9 @@ val result = client.sendAndReceive(
 
 `OfdProtocolViolation`, `OfdTimeoutNoResponse` и `OfdTransportFailure` также содержат машинно-читаемые свойства `reason` и `side`.
 
----
+### Интеграция и подключение
 
-### Подключение библиотеки
+#### Kotlin Multiplatform и Android
 
 Добавьте зависимость в ваш общий набор исходников `commonMain` в `build.gradle.kts`:
 
@@ -161,4 +185,29 @@ kotlin {
         }
     }
 }
+```
+
+#### Apple Swift Package Manager (SPM)
+
+Вы можете подключить библиотеку непосредственно в iOS-приложение с помощью Swift Package Manager в Xcode:
+1. Выберите в Xcode: **File ➔ Add Package Dependencies...**
+2. Введите URL репозитория: `https://github.com/texport/ofd-network-client.git`
+3. Установите правило версии **Up to Next Major** начиная с `1.2.0`.
+
+---
+
+### Архитектурные границы и ограничения
+
+Библиотека `ofd-network-client` выполняет роль низкоуровневого сетевого транспорта и четко разделяет ответственность между чистой логикой подключения/протокола и прикладным уровнем:
+
+- **Внутри библиотеки (Зона ответственности):**
+  - Управление жизненным циклом TCP-подключения (установка и закрытие соединения).
+  - Короткоживущие сокеты (один запрос-ответ на транзакцию).
+  - Чтение и парсинг заголовка CPCR (извлечение размера сообщения по смещению `4`).
+  - Проверка корректности размера пакета (`maxResponseBytes`, `headerSize`) для предотвращения переполнения памяти (OOM) до выделения буфера под тело ответа.
+  - Expect/actual определения для логирования и I/O диспетчеров.
+- **Вне библиотеки (Делегировано вызывающему коду):**
+  - Постоянное буферное хранилище / база данных (база данных очереди не поставляется с библиотекой).
+  - Синхронизация потоков, блокировки аренды чеков (lease locks) и планирование выполнения на нескольких узлах (нодах).
+  - Политика повторных попыток (retries), экспоненциальная задержка (backoff) и логика координации синхронизации (делегировано внешним библиотекам, таким как `superkassa-offline-queue`).
 ```

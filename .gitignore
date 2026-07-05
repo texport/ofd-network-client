@@ -47,6 +47,8 @@ Thumbs.db
 local.properties
 agent.md
 AGENTS.md
+.agents/
+
 
 ### Kotlin Metadata ###
 .kotlin/
