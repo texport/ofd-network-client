@@ -116,7 +116,7 @@ class OfdTcpNetworkClient(
                 }
             }
         } catch (e: TimeoutCancellationException) {
-            logger.error("Превышено время ожидания ответа от ОФД (лимит: $timeoutMillis мс)", e)
+            logger.warn("Превышено время ожидания ответа от ОФД (лимит: $timeoutMillis мс)")
             Result.failure(
                 OfdTimeoutNoResponse(
                     trilingualMessage(
@@ -132,7 +132,7 @@ class OfdTcpNetworkClient(
         } catch (e: OfdProtocolViolation) {
             Result.failure(e)
         } catch (e: IOException) {
-            logger.error("Транспортное исключение при работе с сокетом ОФД", e)
+            logger.warn("Транспортная ошибка при работе с сокетом ОФД: {}", e.message ?: e.toString())
             Result.failure(e.toOfdTransportFailure())
         } catch (e: Throwable) {
             logger.error("Непредвиденная ошибка в сетевом клиенте ОФД", e)
