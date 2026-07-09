@@ -16,7 +16,7 @@ plugins {
 }
 
 group = "io.github.texport"
-version = "1.2.0"
+version = "1.2.1"
 
 repositories {
     google()
